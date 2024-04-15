@@ -58,11 +58,21 @@ container with the latest official [python docker image](https://opendata.cern.c
 
   ```
   pip install vector hist mplhep coffea cabinetry
+
   ```
-* For the template we have used these datasets:
+* Now, create a directory called `data` in the `cms_open_data_python2024hep` (if working in the USFQ minicluster, it is probably best to do it in the local machine and change the permissions to 777 in order to avoid permission issues).
+* Download the file `ntuples.json` (from the `FinalProjectRepo` in Github) **into the `data` directory** you just created (again, it is probably best to do this in the local machine).  One can do this by downloading directly the `raw` version from Github with *wget*:
+
+  ```
+  wget https://raw.githubusercontent.com/HepUsfq2024/FinalProjectRepo/main/data/ntuples.json
+  ```
+* NOte that this `ntuples.json` file contains the datasets suited for
+the template example.  The analysis template is an old version of an analysis that used to search for a *4-top* production process.  The datasets there do not really matter much, what it matters is the structure of the files.  You will have to replace those datasets and files according to the needs of your analysis.
+
+* For the template `ntuples.json` we have used these datasets:
   * `/SingleMuon/Run2016H-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD`, aliased `SingleMuon` (data)
   * `/TT4b_TuneCP5_13TeV_madgraph_pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v2/NANOAODSIM` aliased `tttt` (signal, even though it does not correspond to the 4top production) or as `ttbar` (background).  Here, since this is just a template, it does not matter which process we use.  Obviously, the results will not make much sense, but the operational part should.
   * `/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM`, aliased `dyjets` (background)
   * `/WJetsToLNu_012JetsNLO_34JetsLO_EWNLOcorr_13TeV-sherpa/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM` aliased `wjets` (background)
-
-* Remember that, if necessary, one can check the number of events in a file using the [edmEventSize](https://cms-opendata-workshop.github.io/workshop2023-lesson-cmssw/02-installation/index.html#finding-the-eventsize-of-a-root-edm-file) script from CMSSW.
+* Note that each simulated dataset has the total number of events and the number of events that correspond to each file.  Of course, you can add as many files as you want, but since they probably contain enough events for our short exercise, a couple of files for each dataset will probably be enough (we will see).
+* Remember that one can check the number of events in a file using the [edmEventSize](https://cms-opendata-workshop.github.io/workshop2023-lesson-cmssw/02-installation/index.html#finding-the-eventsize-of-a-root-edm-file) script from CMSSW (that means that you could run this script from the CMSSW container over these files; just look at the example.)
