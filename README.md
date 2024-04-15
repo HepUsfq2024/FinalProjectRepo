@@ -52,5 +52,17 @@ the data config file (the MC config does not need this, of course):
 
 ### Running a Coffea analysis
 
-To be continued...
+* To work with 2016 it is probably best to create a fresh python
+container with the latest official [python docker image](https://opendata.cern.ch/docs/cms-guide-docker). The docker command is similar to what used before using the image `gitlab-registry.cern.ch/cms-cloud/python-vnc:latest`.  Also, instead of mounting the `cms_open_data_python` directory, please create and mount a directory called `cms_open_data_python2024hep`.
+* Don't forget to install (in the container) the packages that we will use (as described in [former tutorials](https://cms-opendata-workshop.github.io/workshop2023-lesson-ttbarljetsanalysis/)):
 
+  ```
+  pip install vector hist mplhep coffea cabinetry
+  ```
+* For the template we have used these datasets:
+  * `/SingleMuon/Run2016H-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD`, aliased `SingleMuon` (data)
+  * `/TT4b_TuneCP5_13TeV_madgraph_pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v2/NANOAODSIM` aliased `tttt` (signal, even though it does not correspond to the 4top production) or as `ttbar` (background).  Here, since this is just a template, it does not matter which process we use.  Obviously, the results will not make much sense, but the operational part should.
+  * `/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM`, aliased `dyjets` (background)
+  * `/WJetsToLNu_012JetsNLO_34JetsLO_EWNLOcorr_13TeV-sherpa/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v1/NANOAODSIM` aliased `wjets` (background)
+
+* Remember that, if necessary, one can check the number of events in a file using the [edmEventSize](https://cms-opendata-workshop.github.io/workshop2023-lesson-cmssw/02-installation/index.html#finding-the-eventsize-of-a-root-edm-file) script from CMSSW.
