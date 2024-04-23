@@ -1,0 +1,74 @@
+{
+  "data": {
+    "SingleMuon": {
+      "files": [
+        {
+          "path": "file:data/61FC1E38-F75C-6B44-AD19-A9894155874E.root"
+        },
+        {
+          "path": "file:data/576759DA-4A35-534B-B926-2A9E4A5A7268.root"
+        }
+      ]
+    }
+  },
+  "tttt": {
+    "nominal": {
+      "nevts_total": 454000,
+      "files": [
+        {
+          "path": "file:data/081053F2-49A3-EA4B-967A-918D66247B0F.root",
+          "nevts": 14000
+        },
+        {
+          "path": "file:data/E5AF362D-0AD1-4645-B3CC-C132C24FAEF2.root",
+          "nevts": 440000
+        }
+      ]
+    }
+  },
+  "ttbar": {
+    "nominal": {
+      "nevts_total": 454000,
+      "files": [
+        {
+          "path": "file:data/E5AF362D-0AD1-4645-B3CC-C132C24FAEF2.root",
+          "nevts": 440000
+        },
+        {
+          "path": "file:data/081053F2-49A3-EA4B-967A-918D66247B0F.root",
+          "nevts": 14000
+        }
+      ]
+    }
+  },
+  "dyjets": {
+    "nominal": {
+      "nevts_total": 3865459,
+      "files": [
+        {
+          "path": "file:data/0082C29D-E74C-024A-BE9B-97B29EE7A4A2.root",
+          "nevts": 1933726
+        },
+        {
+          "path": "file:data/0718C107-8960-6B44-B96A-C60D53D52A95.root",
+          "nevts": 1931733
+        }
+      ]
+    }
+  },
+  "wjets": {
+    "nominal": {
+      "nevts_total": 1298394,
+      "files": [
+        {
+          "path": "file:data/0C1426A3-07C3-E441-9A1E-7042C0E99DA5.root",
+          "nevts": 710730
+        },
+        {
+          "path": "file:data/0C2AAD37-78DA-9F4F-AFEE-7528F71F36AB.root",
+          "nevts": 587664
+        }
+      ]
+    }
+  }
+}
