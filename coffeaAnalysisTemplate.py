@@ -23,67 +23,71 @@ import pandas as pd
 DATA = "SingleMuon"
 NTUPLES = "data/ntuples.json"
 
-# input files per process, set to e.g. 10 (smaller number = faster)
-#-1 means use them all
+## input files per process, set to e.g. 10 (smaller number = faster)
+##-1 means use them all
 N_FILES_MAX_PER_SAMPLE = 1
 
-### BENCHMARKING-SPECIFIC SETTINGS
+## BENCHMARKING-SPECIFIC SETTINGS
 
-# chunk size to use
+## chunk size to use
 CHUNKSIZE = 500_000
 
-# metadata to propagate through to metrics
+## metadata to propagate through to metrics
 CORES_PER_WORKER = 2  # does not do anything, only used for metric gathering (set to 2 for distributed coffea-casa)
 
-# scaling for local setups with FuturesExecutor
+## scaling for local setups with FuturesExecutor
 NUM_CORES = 4
 
-#NanoAOD datasets are stored in data/ntuples_nanoaod.json folder. 
-#This json file contains information about the number of events, 
-#process and systematic. The following function reads the 
-#json file and returns a dictionary with the process to run.
+##NanoAOD datasets are stored in data/ntuples_nanoaod.json folder. 
+##This json file contains information about the number of events, 
+##process and systematic. The following function reads the 
+##json file and returns a dictionary with the process to run.
 #--------------------------------------------------
 def construct_fileset(n_files_max_per_sample,
                       dataset="SingleMuon",
                       onlyNominal=False,
                       ntuples_json=NTUPLES):
-    # using https://atlas-groupdata.web.cern.ch/atlas-groupdata/dev/AnalysisTop/TopDataPreparation/XSection-MC15-13TeV.data
-    # for reference
-    # Cross sections are in pb
+    ## Cross sections are in pb
+    ## These numbers have been artificially manipulated
+    ## to make the example plot coincide
+    ## Xsections need to be correct and the backgrounds
+    ## properly normalized
     xsec_info = {
-        "ttbar": 831., 
-        "wjets": 61526, 
+    #    "ttbar": 831., 
+    #    "wjets": 61526, 
+    #    "tttt" : 0.009, 
+    #    "dyjets": 6025,
+        "ttbar": 831./200., 
+        "wjets": 61526/80000., 
         "tttt" : 0.009, 
-        "dyjets": 6025,
+        "dyjets": 6025/10000.,
         "data": None
     }
 
-    # list of files
+    ## list of files
     with open(ntuples_json) as f:
         file_info = json.load(f)
     
-    # process into "fileset" summarizing all info
+    ## process into "fileset" summarizing all info
     fileset = {}
     for process in file_info.keys():
         if process == "data":
             file_list = file_info[process][dataset]["files"]
             if n_files_max_per_sample != -1:
                 file_list = file_list[:n_files_max_per_sample]  # use partial set of samples
-                #file_list = file_list[:]  # use all of samples
 
             file_paths = [f["path"] for f in file_list]
             metadata = {"process": "data", "xsec": 1}
             fileset.update({"data": {"files": file_paths, "metadata": metadata}})
             
-        #these "variations" are used for systematic studies
-        #A simple example would use only "nominal"
+        ##these "variations" are used for systematic studies
+        ##A simple example would use only "nominal"
         for variation in file_info[process].keys():
             if onlyNominal & ~variation.startswith("nominal"): continue
             #print(variation)
             file_list = file_info[process][variation]["files"]
             if n_files_max_per_sample != -1:
                 file_list = file_list[:n_files_max_per_sample] #use partial set
-                #file_list = file_list[:]
 
             file_paths = [f["path"] for f in file_list]
             nevts_total = sum([f["nevts"] for f in file_list])
@@ -95,55 +99,53 @@ def construct_fileset(n_files_max_per_sample,
 
 
 
-#-------------Build the filesets
+##-------------Build the filesets
 fileset = construct_fileset(N_FILES_MAX_PER_SAMPLE, dataset=DATA,
                             onlyNominal=True, ntuples_json=NTUPLES) 
-#informational printouts
+##informational printouts
 print(fileset["ttbar__nominal"]["metadata"])
 print(fileset["tttt__nominal"]["metadata"])
 print(fileset["wjets__nominal"]["metadata"])
 print(fileset["dyjets__nominal"]["metadata"])
 print(fileset["data"]["metadata"])
 print(f"\nExample information in fileset:\n{{\n  'files': [{fileset['data']['files'][:]}]\n")
-#----------------------------------------------------------
+##----------------------------------------------------------
 
 
-#---------------------------------------------------------
-# This part is useful to check the total number of
-# data events.  We will need to scale things properly later
-# Load the JSON file
+##---------------------------------------------------------
+## This part is useful to check the total number of
+## data events.  We will need to scale things properly later
+## Load the JSON file
 with open(NTUPLES, 'r') as file:
     data = json.load(file)
     #print(type(data))
 
-# Initialize a variable to store the total number of events
+## Initialize a variable to store the total number of events
 total_events = 0
 
-# Loop through the files in the JSON data
+## Loop through the files in the JSON data
 for file_info in data['data']['SingleMuon']['files']:
     file_path = file_info['path']
     #print(file_path)
 
-    # Open the ROOT file using uproot
+    ## Open the ROOT file using uproot
     with uproot.open(file_path) as f:
-        # Access the 'events' TTree and count the number of entries (events)
+        ## Access the 'events' TTree and count the number of entries (events)
         num_events = f['Events'].num_entries
 
-        # Print the file path and number of events
+        ## Print the file path and number of events
         print("Real data dataset info:")
         print(f"File: {file_path}, Number of Events: {num_events}")
 
-        # Add the number of events to the total
+        ## Add the number of events to the total
         total_events += num_events
 
-# Print the total number of events
+## Print the total number of events
 print(f"Total Number of Events: {total_events}\n")
 #-----------------------------------
 
-#Analyzer
-#Here is the main analyzer. Uses coffea/awkward to make the analysis.
-#Advice: to understand how the selection is working, 
-#print the different arrays before and after the selections are made.
+##------------------------------------------------------Analyzer
+##Here is the main analyzer. Uses coffea/awkward to make the analysis.
 class TemplateAnalysis(processor.ProcessorABC):
     def __init__(self, DATASET):
         self.DATASET = DATASET
@@ -160,7 +162,7 @@ class TemplateAnalysis(processor.ProcessorABC):
         
         # define a dictionary of histograms
         # here is an example of a few variables that one might want to save for later and produce pretty plots
-        # this, and most of the stuff here will have to be tailored to the specifics of each analysis 
+        # this, and most of the stuff here, will have to be tailored to the specifics of each analysis 
         self.hist_muon_dict = {
             'muon_pt'  : (hist.Hist(pt_axis, process_cat, variation_cat, storage=hist.storage.Weight())),
             'muon_eta' : (hist.Hist(eta_axis, process_cat, variation_cat, storage=hist.storage.Weight())),
@@ -175,14 +177,7 @@ class TemplateAnalysis(processor.ProcessorABC):
         # In principle sumw comes from ROOT's sumw(sum weight) function, but I do not know what it does here.
         sumw_dict = {'sumw': processor.defaultdict_accumulator(float)
         }
-        
-        # Variables para contar el flujo de cortes
-        self.cut_flow_counters = {
-            "All Events": 0,
-            "Primary Vertex": 0,
-            "Trigger (IsoMu20)": 0
-        }
-        
+         
         
         ### define vector lists for scatter plot
         self.njets_signal_data = []
@@ -194,14 +189,17 @@ class TemplateAnalysis(processor.ProcessorABC):
         self.njets_data = []
         self.nbjets_data = []
 
+    #------This process function is the one that
+    # is run when the object of this class are forced to "run"
     def process(self, events):
         hists = self.hist_muon_dict.copy()
-        # this refers to the type of dataset:
+        # this refers to the type of dataset.  Do not confuse the process variable
+        # here, with the name of the function:
         process = events.metadata["process"]
         #print(events.fields)
 
-        print(f'Working on process: {process}')
-        print(f'The dataset is {events.metadata["dataset"]}')
+        #print(f'Working on process: {process}')
+        #print(f'The dataset is {events.metadata["dataset"]}')
   
         if process != "data":
             # normalization for MC
@@ -215,112 +213,105 @@ class TemplateAnalysis(processor.ProcessorABC):
             xsec_weight = 1
 
 
-        # OBJECT SELECTION
-        # This is selection that applies to specific physics objects, like muons, jets, b-jets, etc.
-
-        #Note the use of masks in order to apply certain requirements
-        muon_is_global= events.Muon.isGlobal == True
-        muon_is_tracker= events.Muon.isTracker == True
+        #------------------Event Selection
+        # Filtering of the data can be done essentially at two levels:
+        # at the event level and the physical object level
+        # Here are a few lines (mostly commented out) showcasing how one
+        # could apply event selection requirements.
+        # There could be a lot more event selection cuts that need to 
+        # be applied, depending on the analysis
         
-        # Note that this could be all replaced by Tight, Medium or Loose flags, that should be
-        # operative in 2016 nanoado production
-        # we have reduced the requirements just to get more events
-        # The selection, however, needs to align to what the papers describe for the corresponding analysis
-        loose_muon_selection = (events.Muon.pt > 10) & (abs(events.Muon.eta)<2.5) \
-                                & ((muon_is_global) | (muon_is_tracker)) \
-                                & (events.Muon.pfRelIso04_all < 0.25)
+        #Require that the primary vertex in the event is good
+        primary_vertex= events.PV.npvsGood == True
+        
+        ## Requirement on number of primary vertex.
+        ## Require at least one
+        #primary_vertex=events.PV.npvs >= 1
+        
+        ##Trigger selection        
+        #event_filters = ( events.HLT.IsoMu20 == 1 )
+        
+        #update event_filters container
+        #event_filters = event_filters & primary_vertex
+        event_filters=primary_vertex
+        selected_events = events[event_filters]
+        #--------------------------------------------------------------------------
+
+
+        ##---------------------------------------Object selection
+        ## This is selection that applies to specific physics objects, like muons, jets, b-jets, etc.
+        ## Here are a few examples, mostly commented out for the sake of getting some statistics
+        ## from a very low number of events.
+
+        ## Note the use of masks in order to apply certain requirements
+        #muon_is_global= events.Muon.isGlobal == True
+        #muon_is_tracker= events.Muon.isTracker == True
+        
+        ## Note that this could be all replaced by Tight, Medium or Loose flags, that should be
+        ## operative in 2016 nanoado production
+        ## we have reduced the requirements just to get more events
+        ## The selection, however, needs to align to what the papers describe for the corresponding analysis
+        #loose_muon_selection = (events.Muon.pt > 10) & (abs(events.Muon.eta)<2.5) \
+        #                        & ((muon_is_global) | (muon_is_tracker)) \
+        #                        & (events.Muon.pfRelIso04_all < 0.25)
         # selected_muon_selection = (events.Muon.pt > 26) & (abs(events.Muon.eta)<2.1) \
         #                             & ((muon_is_global) & (muon_is_tracker)) \
         #                             & (events.Muon.nTrackerLayers > 5) & (events.Muon.nStations > 0) \
         #                             & (abs(events.Muon.dxy) < 0.2) & (abs(events.Muon.dz) < 0.5) \
         #                             & (events.Muon.pfRelIso04_all < .15)
-        selected_muon_selection = (events.Muon.pt > 10) & (abs(events.Muon.eta)<2.1)
-        # Note that the selection is done using the masks above
-        # This is how filtering is done in the industry as well
-        selected_muons = events.Muon[( loose_muon_selection & selected_muon_selection)]
-        veto_muons = events.Muon[( loose_muon_selection & ~selected_muon_selection)]
+        ## Note that the selection is done using the masks above
+        ## This is how filtering is done in the industry as well
+        #selected_muons = events.Muon[( loose_muon_selection & selected_muon_selection)]
+        #veto_muons = events.Muon[( loose_muon_selection & ~selected_muon_selection)]
+        selected_muons = events.Muon[(events.Muon.pt > 5)]
+        selected_muon = (ak.count(selected_muons.pt, axis=1) == 1 ) 
+
         
-        # Selection of jets
-        # Again we have loosen the requirements
+        ## Selection of jets
         #jet_selection = (events.Jet.pt > 30) & (abs(events.Jet.eta) < 2.5) & (events.Jet.jetId > 1)
-        jet_selection = (events.Jet.pt > 10) & (abs(events.Jet.eta) < 2.5) & (events.Jet.jetId > 1)
-        selected_jets = events.Jet[jet_selection]
-        # Note here that some functions and tools are already implemented as part of coffea, like the TLorentzVector's nearest()
-        # See: https://github.com/CoffeaTeam/coffea/blob/d3beaff974025aa260efb2df9e8da7138a77b795/src/coffea/nanoevents/methods/vector.py#L779
-        # and the coffea documentation
-        nearest_lepton = selected_jets.nearest(selected_muons, threshold=.4)
-        selected_jets = selected_jets[ ~ak.is_none(nearest_lepton) ]
+        #selected_jets = events.Jet[jet_selection]
+        ## Note here that some functions and tools are already implemented as part of coffea, like the TLorentzVector's nearest()
+        ## See: https://github.com/CoffeaTeam/coffea/blob/d3beaff974025aa260efb2df9e8da7138a77b795/src/coffea/nanoevents/methods/vector.py#L779
+        ## and the coffea documentation
+        #nearest_lepton = selected_jets.nearest(selected_muons, threshold=.4)
+        #selected_jets = selected_jets[ ~ak.is_none(nearest_lepton) ]
         ## the results of these 2 lines should be equivalent to the 2 lines above
         #lepton_mask = ak.any(selected_jets.metric_table(selected_lepton, metric=lambda j, e: ak.local_index(j, axis=1) == e.jetIdx,), axis=2)
         #selected_jets = selected_jets[~lepton_mask]
-
-        #this is an example of how b-jets might be selected
-        selected_bjets = events.Jet[jet_selection & ~ak.is_none(nearest_lepton) & (events.Jet.btagCSVV2 >=0.8)]
-        selected_jets_nobjets = events.Jet[jet_selection & ~ak.is_none(nearest_lepton) & ~(events.Jet.btagCSVV2 >=0.8)]  ### this we might use it later
+        ##this is an example of how b-jets might be selected
+        #selected_bjets = events.Jet[jet_selection & ~ak.is_none(nearest_lepton) & (events.Jet.btagCSVV2 >=0.8)]
+        #selected_jets_nobjets = events.Jet[jet_selection & ~ak.is_none(nearest_lepton) & ~(events.Jet.btagCSVV2 >=0.8)]
+        selected_jets = events.Jet[(events.Jet.pt > 5)]     
+        selected_bjets = events.Jet[(events.Jet.btagCSVV2 >=0.8)]
         
         
-        ### Object selection: Electron
-        #Veto electrons 
-        veto_electron_selection = (events.Electron.pt > 15) & (abs(events.Electron.eta) < 2.5) & (events.Electron.cutBased == 1)    
-        #tight electrons
-        selected_electron_selection = (events.Electron.pt > 30) & (abs(events.Electron.eta) < 2.1) & (events.Electron.cutBased == 4)
-        selected_electrons = events.Electron[ selected_electron_selection & veto_electron_selection]
-        veto_electrons = events.Electron[ veto_electron_selection ]
+        ## Electron selection
+        ##Veto electrons 
+        #veto_electron_selection = (events.Electron.pt > 15) & (abs(events.Electron.eta) < 2.5) & (events.Electron.cutBased == 1)    
+        ##tight electrons
+        #selected_electron_selection = (events.Electron.pt > 30) & (abs(events.Electron.eta) < 2.1) & (events.Electron.cutBased == 4)
+        #selected_electrons = events.Electron[ selected_electron_selection & veto_electron_selection]
+        #veto_electrons = events.Electron[ veto_electron_selection ]
+        selected_electrons = events.Electron[(events.Electron.pt > 3)]        
         
-        
-       
-        #### Event Selection
-        # There could be also selection at the event level, i.e.,
-        # requirements or filtering not only for a specific physics object
-        # but on characteristics of the whole event (collision)
-        # Most of this is commented out for this example, but need to
-        # be taken care of 
-        
-        #self.cut_flow_counters["All Events"][process] += len(events)
-        primary_vertex= events.PV.npvsGood == True
-        event_filters=primary_vertex
-        #selected_events = events[event_filters]
-        #self.cut_flow_counters["Primary Vertex"][process] += len(selected_events)        
-        #event_filters = ( events.HLT.IsoMu20 == 1 ) 
-        #selected_events = events[event_filters]    
-        #self.cut_flow_counters["Trigger (IsoMu20)"][process] += len(selected_events)
-        #number of primary vertex, at least one
-        #FIRST CUT
-        #primary_vertex=events.PV.npvs >= 1
-        #event_filters = ( events.HLT.IsoMu20 == 1 )   #trigger selection (1 value per event)
-        #event_filters = event_filters & primary_vertex
-        
-        selected_muon = (ak.count(selected_muons.pt, axis=1) == 1 ) 
-        
-        
-        ##These are some additional selection that is being commented out
-        ## for the sake of example and statistics
-        ##Exactly zero additional loose muons
+        ## Additional selection
+        ## Exactly zero additional loose muons
         #veto_muon = (ak.count(veto_muons.pt, axis=1 ) == 0 )
         #event_filters = event_filters & veto_muon
-        
         ##Exactly zero veto electrons
         #veto_electron = (ak.count(veto_electrons.pt, axis=1) == 0 )      
         #event_filters = event_filters & veto_electron
-        
         ## At least 6 jets
         #at_least_one_jet = (ak.count(selected_jets.pt, axis=1) >= 6)
         #event_filters = event_filters & at_least_one_jet
-        
         ## At least 2 bjets
         #at_least_two_bjets = (ak.count(selected_bjets.pt, axis=1) >= 2)        
         #event_filters = event_filters & at_least_two_bjets
         #print(event_filters)
         
-        # apply event filters
-        # Here we overwrite the selection above (provided as an example) with a simple
-        # selection, just to make sure we get statistics when running over a few events
-        selected_muons = events.Muon[(events.Muon.pt > 0)]
-        selected_jets = events.Jet[(events.Jet.pt > 0)]
-        selected_bjets = events.Jet[(events.Jet.btagCSVV2 >=0.8)]
-        selected_electrons = events.Electron[(events.Electron.pt > 0)]
+        ##overwrite the event filter just to get
+        ##more statistics
         event_filters = selected_muon
-
         selected_events = events[event_filters]
         selected_muons = selected_muons[event_filters]
         selected_jets = selected_jets[event_filters]
@@ -328,7 +319,7 @@ class TemplateAnalysis(processor.ProcessorABC):
         selected_electrons = selected_electrons[event_filters]
                
         
-        #filling of the histograms with weights       
+        ##filling of the histograms with weights       
         for ivar in [ "pt", "eta" ]:
             hists[f'muon_{ivar}'].fill(
                         var=ak.flatten(getattr(selected_muons, ivar)), process=process, variation="nominal", weight=xsec_weight)
@@ -366,11 +357,12 @@ class TemplateAnalysis(processor.ProcessorABC):
 
     def postprocess(self, accumulator):        
         return accumulator
-    
+#--------------------------------------------    
 
-#---------------------------
+#--------------------------------------------
 # Run the executor
-#The iterative executor is a local executor
+# The iterative executor is a local, simple executor
+# The FuturesExecutor manages threads in a more efficient way
 #executor = processor.FuturesExecutor()
 executor = processor.IterativeExecutor()
 
@@ -379,7 +371,7 @@ run = processor.Runner(executor=executor, schema=NanoAODSchema,
 t0 = time.monotonic()
 all_histograms, metrics = run(fileset, "Events", processor_instance=TemplateAnalysis(DATASET=DATA))
 exec_time = time.monotonic() - t0
-#--------------------------------------
+#--------------------------------------------
     
 
 #-------------------------- --------------------------------------------
